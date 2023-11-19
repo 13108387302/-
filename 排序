@@ -1,0 +1,269 @@
+#define _CRT_SECURE_NO_WARNINGS 1
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#define maxsize 20000
+//对数器
+void CompareTool(void (*p)(int*,int,int),void(*m)(int*,int,int)) {
+	//生产随机数组
+	int a =10;
+	srand((unsigned int)time(NULL));
+	int arr1[maxsize] = { 0 };
+	int arr2[maxsize] = { 0 };
+	int arr3[maxsize] = { 0 };
+	for (int s = 0; s < a; s++) {
+		for (int i = 0; i < maxsize; i++) {
+			arr1[i] = rand()%1000;
+			arr2[i] = arr1[i];
+			arr3[i] = arr1[i];
+		}
+		clock_t start, end;
+		start = clock();
+		p(arr1,0, maxsize-1);
+		end = clock();
+		printf("\n1:共用时%f\n", (double)(end - start) / CLOCKS_PER_SEC);
+		start = clock();
+		m(arr2, 0,maxsize-1);
+		end = clock();
+		printf("\n2:共用时%f\n", (double)(end - start) / CLOCKS_PER_SEC);
+		for (int i = 0; i < maxsize; i++) {
+			if (arr1[i] != arr2[i]) {
+				printf("两排序结果不同\n在第%d次校对中发生差异\n存在排序差异的数组为：",s+1);
+				for (int k = 0; k < maxsize; k++) {
+					printf("%d,", arr3[k]);
+				}
+				printf("\n前函数的排序结果为：");
+				for (int k = 0; k < maxsize; k++) {
+					printf("%d,", arr1[k]);
+				}
+				printf("\n后函数的排序结果为：");
+				for (int k = 0; k < maxsize; k++) {
+					printf("%d,", arr2[k]);
+				}
+				goto byby;
+			}
+		}
+		if (s == a - 1) {
+			printf("两排序结果相同\n共校对%d次",s+1);
+		}	
+	}
+byby:;
+}
+//辅助算法
+void change(int* i, int* j) {
+	if (*i != *j) {
+		*i = *i ^ *j;
+		*j = *i ^ *j;
+		*i = *i ^ *j;
+	}
+}
+int MyMax(int* arr, int len) {
+	int m=arr[0] ;
+	int c = 0;
+	for (int i = 0; i < len; i++) {
+		if (arr[i] > m) {
+			m = arr[i];
+			c = i;
+		}
+	}
+	return c;
+} 
+void upsort(int *arr,int index) {
+	int m = (index - 1) / 2;
+	if (arr[index] > arr[m]) {
+		change(arr + index, arr + m);
+		index = m;
+		upsort(arr, index);
+	}
+}
+void downsort(int* arr, int index, int len) {
+	if (index * 2 + 2 < len) {
+		int i = 0;
+		if (arr[index * 2 + 1] > arr[index * 2 + 2]) {
+			i = index * 2 + 1;
+		}
+		else {
+			i = index * 2 + 2;
+		}
+		if (arr[index] < arr[i]) {
+			change(arr + index, arr + i);
+			index = i;
+			downsort(arr, index, len);
+		}
+	}
+	else if (index * 2 + 1 < len && arr[index * 2 + 1] > arr[index]) {
+		change(arr + index, arr + index * 2 + 1);
+	}
+}
+int* merge(int* a, int b,int* q,int p) {
+	int s = 0, t = 0, i = 0;;
+	int* c = (int*)malloc(sizeof(int)*(b+p));
+		while(s < b && t < p) {
+			if (a[s] > q[t]) {
+				c[i++] = q[t++];
+			}
+			else {
+				c[i++] = a[s++];
+			}
+		}
+		if (s == b) {
+			while(i<b+p){
+				c[i++] = q[t++];
+			}
+		}
+		if (t == p) {
+			while(i<b+p) {
+				c[i++] = a[s++];
+			}
+		}
+	return c;
+}
+int* classify(int arr[], int left, int right) {
+	if (left== right) {
+		int* a = (int*)malloc(sizeof(int));
+		*a = arr[left];
+		return a;
+	}
+	int mid = (right-left) / 2;
+	int* m = classify(arr, left, left + mid);
+	int* n = classify(arr, left+mid + 1, right);
+	return merge(m, mid + 1, n, right-left - mid);
+}
+
+int getdigit(int m, int n) {
+	for (int i = 0; i < n-1; i++) {
+		m /= 10;
+	}
+	return m % 10;
+}
+//主算法
+void BubbleSort(int* arr,int left,int right) {
+	for (int i = right-left+1 ; i >0 ; i--) {
+		for (int j = 0; j < i-1; j++) {
+			if (arr[j] > arr[j + 1]) {
+				change(arr+j, arr+j+1);
+			}
+		}
+	}
+}
+void SelectionSort(int* arr,int left,int right) {
+	for (int i = right-left; i >=0; i--) {
+		change(arr + i, arr + MyMax(arr, i + 1));
+	}
+}
+void InsertSort(int* arr, int left,int right) {
+	for (int i = 0; i < right-left+1; i++) {
+		for (int j = i; j >0; j--) {
+			if (arr[j] < arr[j - 1]) {
+				change(arr + j, arr + j - 1);
+			}
+		}
+	}
+}
+
+void PartitionSort(int* arr, int left, int right) {
+	int i = left;
+	int e = right;
+	int m = left;
+	while (m != e) {
+		if (arr[m] < arr[right]) {
+			change(arr + i, arr + m);
+			i++;
+			m++;
+		}
+		else if (arr[m] == arr[right]) {
+			m++;
+		}
+		else {
+			change(arr + m, arr + e - 1);
+			e--;
+		}
+	}
+	if (right-e == 0) {
+		if (i - left == 0) {
+			;
+		}
+		else {
+			PartitionSort(arr, left, i - 1);
+		}
+	}
+	else {
+		change(arr + e, arr + right);
+		e++;
+		if (i - left == 0) {
+			PartitionSort(arr, e, right);
+		}
+		else {
+			PartitionSort(arr, left, i - 1);
+			PartitionSort(arr, e, right);
+		}
+	}
+}
+
+void HeapSort(int* arr,int left,int right) {
+	for (int i = left; i <=right ; i++) {
+		upsort(arr, i);
+	}
+	for (int a = 0; a < right - left + 1; a++) {
+		change(arr+left, arr + right-a);
+		downsort(arr, left, right-left-a);
+	}
+}
+
+void MergeSort(int arr[],int left,int right) {
+	int* a = classify(arr, left, right);
+	for (int i = 0; i < right - left + 1; i++) {
+		arr[i] = a[i];
+	}
+}
+
+void RadixSort(int arr[],int left, int right) {
+	int* c = (int*)malloc(sizeof(int) * (right - left + 1));
+	int j = 0,l=arr[MyMax(arr,right-left+1)];
+	while (l) {
+		j++;
+		l /= 10;
+	}
+	for (int i = 1; i < j+1; i++) {
+		int bucket[10] = { 0 };
+		for (int l = 0; l < right - left + 1; l++) {
+			bucket[getdigit(arr[l], i)]++;
+		}
+		for (int p = 0,s=0; p < 10; p++) {
+			for (int m = 0;m < right - left + 1; m++) {
+				if (getdigit(arr[m], i) == p) {
+					c[s++] = arr[m];
+				}
+			}
+		}
+		for (int n = 0; n < right - left + 1; n++) {
+			arr[n] = c[n];
+		}
+	}
+}
+int main()
+{
+	//创建并打印待排序数组
+	//int arr[maxsize];
+	//srand((unsigned int)time(NULL));
+	//for (int i = 0; i < maxsize; i++) {
+	//	arr[i] = rand()%100;
+	//	printf("%d ", arr[i]);
+	//}
+	//printf("\n%d", MyMax(arr, maxsize));
+	//printf("\n");
+	//排序
+	///*InsertSort(arr, maxsize);*/
+	//mergesort(arr, 0, maxsize-1);
+	//打印排序好的数组
+	//for (int i = 0; i < sizeof(arr) / 4 ; i++) {
+	//	printf("%d ", arr[i]);
+	//}
+	CompareTool(RadixSort,HeapSort);
+	///*int arr[maxsize] = { 31,8,71,73,2,20,35,20 };
+	//partition(arr, 0, maxsize - 1);
+	//for (int i = 0; i < maxsize; i++) {
+	//	printf("%d,", arr[i]);
+	//}*/
+	return 0;
+}
